@@ -97,6 +97,7 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     rightLCAbsm @71;
     leftLCAbsm @72;
     preventLCA @73;
+    steerTorqueOver @74;
   }
 }
 
@@ -319,6 +320,14 @@ struct CarControl {
       chimeWarning2 @5;
       chimeWarningRepeat @6;
       chimePrompt @7;
+	    chimeReady @8;
+  	  chimeDoorOpen @9;
+  	  chimeGearDrive @10;
+  	  chimeLaneChange @11;
+  	  chimeLaneDeparture @12;
+  	  chimeRoadWarning @13;
+  	  chimeSeatBelt @14;
+  	  chimeViewUncertain @15;
     }
   }
 }
