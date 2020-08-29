@@ -31,7 +31,7 @@ CURRENT_TAU = 15.   # 15s time constant
 DAYS_NO_CONNECTIVITY_MAX = 7  # do not allow to engage after a week without internet
 DAYS_NO_CONNECTIVITY_PROMPT = 4  # send an offroad prompt after 4 days with no internet
 
-mediaplayer = '/data/openpilot/selfdrive/openpilot/mediaplayer/'
+mediaplayer = '/data/openpilot/selfdrive/sound/mediaplayer/'
 
 with open(BASEDIR + "/selfdrive/controls/lib/alerts_offroad.json") as json_file:
   OFFROAD_ALERTS = json.load(json_file)
