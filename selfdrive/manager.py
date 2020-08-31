@@ -133,18 +133,18 @@ ThermalStatus = cereal.log.ThermalData.ThermalStatus
 # comment out anything you don't want to run
 managed_processes = {
   "thermald": "selfdrive.thermald",
-  "uploader": "selfdrive.loggerd.uploader",
-  "deleter": "selfdrive.loggerd.deleter",
+  #"uploader": "selfdrive.loggerd.uploader",
+  #"deleter": "selfdrive.loggerd.deleter",
   "controlsd": "selfdrive.controls.controlsd",
   "plannerd": "selfdrive.controls.plannerd",
   "radard": "selfdrive.controls.radard",
   "dmonitoringd": "selfdrive.controls.dmonitoringd",
   "ubloxd": ("selfdrive/locationd", ["./ubloxd"]),
   #"loggerd": ("selfdrive/loggerd", ["./loggerd"]),
-  "logmessaged": "selfdrive.logmessaged",
+  #"logmessaged": "selfdrive.logmessaged",
   "locationd": "selfdrive.locationd.locationd",
-  "tombstoned": "selfdrive.tombstoned",
-  "logcatd": ("selfdrive/logcatd", ["./logcatd"]),
+  #"tombstoned": "selfdrive.tombstoned",
+  #"logcatd": ("selfdrive/logcatd", ["./logcatd"]),
   "proclogd": ("selfdrive/proclogd", ["./proclogd"]),
   "boardd": ("selfdrive/boardd", ["./boardd"]),   # not used directly
   "pandad": "selfdrive.pandad",
@@ -178,25 +178,25 @@ interrupt_processes = []
 kill_processes = ['sensord', 'paramsd']
 
 # processes to end if thermal conditions exceed Green parameters
-green_temp_processes = ['uploader']
+#green_temp_processes = ['uploader']
 
 persistent_processes = [
   'thermald',
-  'logmessaged',
+  #'logmessaged',
   'ui',
-  'uploader',
+  #'uploader',
 ]
 if ANDROID:
   persistent_processes += [
-    'logcatd',
-    'tombstoned',
-    'updated',
+    #'logcatd',
+    #'tombstoned',
+    #'updated',
   ]
 
 car_started_processes = [
   'controlsd',
   'plannerd',
-  'loggerd',
+  #'loggerd',
   'radard',
   'dmonitoringd',
   'calibrationd',
@@ -213,7 +213,7 @@ if ANDROID:
     'clocksd',
     'gpsd',
     'dmonitoringmodeld',
-    'deleter',
+    #'deleter',
   ]
 
 def register_managed_process(name, desc, car_started=False):
@@ -387,7 +387,7 @@ def manager_thread():
   cloudlog.info({"environ": os.environ})
 
   # save boot log
-  subprocess.call(["./loggerd", "--bootlog"], cwd=os.path.join(BASEDIR, "selfdrive/loggerd"))
+  #subprocess.call(["./loggerd", "--bootlog"], cwd=os.path.join(BASEDIR, "selfdrive/loggerd"))
 
   params = Params()
 
@@ -509,6 +509,56 @@ def main():
     params.put("OpenpilotEnabledToggle", "1")
   if params.get("LaneChangeEnabled") is None:
     params.put("LaneChangeEnabled", "1")
+  if params.get("SpeedControlEnabled") is None:
+    params.put("SpeedControlEnabled", "0")
+  if params.get("OpkrAutoLanechangedelay") is None:
+    params.put("OpkrAutoLanechangedelay", "0")
+  if params.get("FingerprintIssuedFix") is None:
+    params.put("FingerprintIssuedFix", "0")
+  if params.get("LdwsCarFix") is None:
+    params.put("LdwsCarFix", "0")
+  if params.get("LateralControlMethod") is None:
+    params.put("LateralControlMethod", "0")
+  if params.get("OuterLoopGain") is None:
+    params.put("OuterLoopGain", "20")
+  if params.get("InnerLoopGain") is None:
+    params.put("InnerLoopGain", "30")
+  if params.get("TimeConstant") is None:
+    params.put("TimeConstant", "10")
+  if params.get("ActuatorEffectiveness") is None:
+    params.put("ActuatorEffectiveness", "15")
+  if params.get("Scale") is None:
+    params.put("Scale", "1850")
+  if params.get("LqrKi") is None:
+    params.put("LqrKi", "30")
+  if params.get("DcGain") is None:
+    params.put("DcGain", "30")
+  if params.get("PidKp") is None:
+    params.put("PidKp", "20")
+  if params.get("PidKi") is None:
+    params.put("PidKi", "40")
+  if params.get("PidKf") is None:
+    params.put("PidKf", "4")
+  if params.get("IgnoreZone") is None:
+    params.put("IgnoreZone", "0")
+  if params.get("CameraOffsetAdj") is None:
+    params.put("CameraOffsetAdj", "60")
+  if params.get("SteerRatioAdj") is None:
+    params.put("SteerRatioAdj", "125")
+  if params.get("SteerActuatorDelayAdj") is None:
+    params.put("SteerActuatorDelayAdj", "30")
+  if params.get("SteerRateCostAdj") is None:
+    params.put("SteerRateCostAdj", "50")
+  if params.get("SteerLimitTimerAdj") is None:
+    params.put("SteerLimitTimerAdj", "40")
+  if params.get("TireStiffnessFactorAdj") is None:
+    params.put("TireStiffnessFactorAdj", "100")
+  if params.get("SteerMaxAdj") is None:
+    params.put("SteerMaxAdj", "255")
+  if params.get("SteerDeltaUpAdj") is None:
+    params.put("SteerDeltaUpAdj", "3")
+  if params.get("SteerDeltaDownAdj") is None:
+    params.put("SteerDeltaDownAdj", "7")
 
   # is this chffrplus?
   if os.getenv("PASSIVE") is not None:
