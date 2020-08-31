@@ -391,14 +391,13 @@ def manager_thread():
   #subprocess.call(["./loggerd", "--bootlog"], cwd=os.path.join(BASEDIR, "selfdrive/loggerd"))
 
   params = Params()
-  
-  car_started_processes.remove( 'loggerd' )
-  persistent_processes.remove( 'logmessaged' )
-  persistent_processes.remove( 'uploader' )
-  persistent_processes.remove( 'logcatd' )
-  persistent_processes.remove( 'updated' )
-  persistent_processes.remove( 'deleter' )
-  persistent_processes.remove( 'tombstoned' )
+  del managed_processes['loggerd']
+  del managed_processes['logmessaged']
+  del managed_processes['uploader']  
+  del managed_processes['logcatd']  
+  del managed_processes['updated']  
+  del managed_processes['deleter']  
+  del managed_processes['tombstoned']  
   
   # start daemon processes
   for p in daemon_processes:
