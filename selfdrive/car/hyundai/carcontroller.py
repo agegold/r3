@@ -6,13 +6,14 @@ from selfdrive.car.hyundai.hyundaican import create_lkas11, create_clu11, \
                                              create_scc12, create_mdps12
 from selfdrive.car.hyundai.values import Buttons, CAR
 from opendbc.can.packer import CANPacker
+from common.params import Params
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 
 class SteerLimitParams:
-  STEER_MAX = 255   # 409 is the max, 255 is stock
-  STEER_DELTA_UP = 3
-  STEER_DELTA_DOWN = 7
+  STEER_MAX = int(Params().get('SteerMaxAdj'))   # 409 is the max, 255 is stock
+  STEER_DELTA_UP = int(Params().get('SteerDeltaUpAdj'))
+  STEER_DELTA_DOWN = int(Params().get('SteerDeltaDownAdj'))
   STEER_DRIVER_ALLOWANCE = 50
   STEER_DRIVER_MULTIPLIER = 2
   STEER_DRIVER_FACTOR = 1
