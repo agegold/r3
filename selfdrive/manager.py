@@ -133,18 +133,18 @@ ThermalStatus = cereal.log.ThermalData.ThermalStatus
 # comment out anything you don't want to run
 managed_processes = {
   "thermald": "selfdrive.thermald",
-  #"uploader": "selfdrive.loggerd.uploader",
-  #"deleter": "selfdrive.loggerd.deleter",
+  "uploader": "selfdrive.loggerd.uploader",
+  "deleter": "selfdrive.loggerd.deleter",
   "controlsd": "selfdrive.controls.controlsd",
   "plannerd": "selfdrive.controls.plannerd",
   "radard": "selfdrive.controls.radard",
   "dmonitoringd": "selfdrive.controls.dmonitoringd",
   "ubloxd": ("selfdrive/locationd", ["./ubloxd"]),
-  #"loggerd": ("selfdrive/loggerd", ["./loggerd"]),
-  #"logmessaged": "selfdrive.logmessaged",
+  "loggerd": ("selfdrive/loggerd", ["./loggerd"]),
+  "logmessaged": "selfdrive.logmessaged",
   "locationd": "selfdrive.locationd.locationd",
-  #"tombstoned": "selfdrive.tombstoned",
-  #"logcatd": ("selfdrive/logcatd", ["./logcatd"]),
+  "tombstoned": "selfdrive.tombstoned",
+  "logcatd": ("selfdrive/logcatd", ["./logcatd"]),
   "proclogd": ("selfdrive/proclogd", ["./proclogd"]),
   "boardd": ("selfdrive/boardd", ["./boardd"]),   # not used directly
   "pandad": "selfdrive.pandad",
@@ -155,7 +155,7 @@ managed_processes = {
   "sensord": ("selfdrive/sensord", ["./sensord"]),
   "clocksd": ("selfdrive/clocksd", ["./clocksd"]),
   "gpsd": ("selfdrive/sensord", ["./gpsd"]),
-  #"updated": "selfdrive.updated",
+  "updated": "selfdrive.updated",
   "dmonitoringmodeld": ("selfdrive/modeld", ["./dmonitoringmodeld"]),
   "modeld": ("selfdrive/modeld", ["./modeld"]),
 }
@@ -178,25 +178,25 @@ interrupt_processes = []
 kill_processes = ['sensord', 'paramsd']
 
 # processes to end if thermal conditions exceed Green parameters
-#green_temp_processes = ['uploader']
+green_temp_processes = ['uploader']
 
 persistent_processes = [
   'thermald',
-  #'logmessaged',
+  'logmessaged',
   'ui',
-  #'uploader',
+  'uploader',
 ]
 if ANDROID:
   persistent_processes += [
-    #'logcatd',
-    #'tombstoned',
-    #'updated',
+    'logcatd',
+    'tombstoned',
+    'updated',
   ]
 
 car_started_processes = [
   'controlsd',
   'plannerd',
-  #'loggerd',
+  'loggerd',
   'radard',
   'dmonitoringd',
   'calibrationd',
@@ -213,7 +213,7 @@ if ANDROID:
     'clocksd',
     'gpsd',
     'dmonitoringmodeld',
-    #'deleter',
+    'deleter',
   ]
 
 def register_managed_process(name, desc, car_started=False):
@@ -387,10 +387,18 @@ def manager_thread():
   cloudlog.info({"environ": os.environ})
 
   # save boot log
+  
   #subprocess.call(["./loggerd", "--bootlog"], cwd=os.path.join(BASEDIR, "selfdrive/loggerd"))
 
   params = Params()
-
+  del managed_processes['loggerd']
+  del managed_processes['logmessaged']
+  del managed_processes['uploader']  
+  del managed_processes['logcatd']  
+  del managed_processes['updated']  
+  del managed_processes['deleter']  
+  del managed_processes['tombstoned']  
+  
   # start daemon processes
   for p in daemon_processes:
     start_daemon_process(p)
