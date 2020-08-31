@@ -1,10 +1,9 @@
 from common.numpy_fast import interp
 import numpy as np
-from selfdrive.kegman_conf import kegman_conf
 from cereal import log
+from common.params import Params
 
-kegman = kegman_conf()
-CAMERA_OFFSET = float(kegman.conf['cameraOffset'])  # m from center car to camera
+CAMERA_OFFSET = float(int(Params().get('CameraOffsetAdj')) * 0.001)  # m from center car to camera
 
 #zorrobyte
 def mean(numbers): 
