@@ -5,10 +5,8 @@ from selfdrive.swaglog import cloudlog
 from selfdrive.controls.lib.lateral_mpc import libmpc_py
 from selfdrive.controls.lib.drive_helpers import MPC_COST_LAT
 from selfdrive.controls.lib.lane_planner import LanePlanner
-from selfdrive.kegman_conf import kegman_conf
 from selfdrive.config import Conversions as CV
 from common.params import Params
-from common.numpy_fast import interp
 import cereal.messaging as messaging
 from cereal import log
 
@@ -57,29 +55,22 @@ class PathPlanner():
     self.lane_change_enabled = Params().get('LaneChangeEnabled') == b'1'
     self.path_offset_i = 0.0
 
-    self.mpc_frame = 0
-    self.sR_delay_counter = 0
-    self.steerRatio_new = 0.0
-    self.sR_time = 1
+    self.steerRatio = float(int(Params().get('SteerRatioAdj')) * 0.1)
+    self.steerRateCost = float(int(Params().get('SteerRateCostAdj')) * 0.01)
 
-    kegman = kegman_conf(CP)
-    if kegman.conf['steerRatio'] == "-1":
-      self.steerRatio = CP.steerRatio
-    else:
-      self.steerRatio = float(kegman.conf['steerRatio'])
+    if int(Params().get('OpkrAutoLanechangedelay')) == 0:
+      self.alc_nudge_less = 0
+    elif int(Params().get('OpkrAutoLanechangedelay')) == 1:
+      self.alc_nudge_less = 0.1
+    elif int(Params().get('OpkrAutoLanechangedelay')) == 2:
+      self.alc_nudge_less = 0.5
+    elif int(Params().get('OpkrAutoLanechangedelay')) == 3:
+      self.alc_nudge_less = 1.0
+    elif int(Params().get('OpkrAutoLanechangedelay')) == 4:
+      self.alc_nudge_less = 1.5
+    elif int(Params().get('OpkrAutoLanechangedelay')) == 5:
+      self.alc_nudge_less = 2.0
 
-    if kegman.conf['steerRateCost'] == "-1":
-      self.steerRateCost = CP.steerRateCost
-    else:
-      self.steerRateCost = float(kegman.conf['steerRateCost'])
-
-    self.sR = [float(kegman.conf['steerRatio']), (float(kegman.conf['steerRatio']) + float(kegman.conf['sR_boost']))]
-    self.sRBP = [float(kegman.conf['sR_BP0']), float(kegman.conf['sR_BP1'])]
-
-    self.steerRateCost_prev = self.steerRateCost
-    self.setup_mpc()
-
-    self.alc_nudge_less = bool(int(kegman.conf['ALCnudgeLess']))
     self.lane_change_state = LaneChangeState.off
     self.lane_change_direction = LaneChangeDirection.none
     self.lane_change_timer = 0.0
@@ -119,38 +110,6 @@ class PathPlanner():
     VM.update_params(sm['liveParameters'].stiffnessFactor, sm['liveParameters'].steerRatio)
     curvature_factor = VM.curvature_factor(v_ego)
 
-    # Get steerRatio and steerRateCost from kegman.json every x seconds
-    self.mpc_frame += 1
-    if self.mpc_frame % 500 == 0:
-      # live tuning through /data/openpilot/tune.py overrides interface.py settings
-      kegman = kegman_conf()
-      if kegman.conf['tuneGernby'] == "1":
-        self.steerRateCost = float(kegman.conf['steerRateCost'])
-        if self.steerRateCost != self.steerRateCost_prev:
-          self.setup_mpc()
-          self.steerRateCost_prev = self.steerRateCost
-
-        self.sR = [float(kegman.conf['steerRatio']), (float(kegman.conf['steerRatio']) + float(kegman.conf['sR_boost']))]
-        self.sRBP = [float(kegman.conf['sR_BP0']), float(kegman.conf['sR_BP1'])]
-        self.sR_time = int(float(kegman.conf['sR_time']) * 100.)
-
-      self.mpc_frame = 0
-
-    if v_ego > 11.111:
-      # boost steerRatio by boost amount if desired steer angle is high
-      self.steerRatio_new = interp(abs(angle_steers), self.sRBP, self.sR)
-
-      self.sR_delay_counter += 1
-      if self.sR_delay_counter % self.sR_time != 0:
-        if self.steerRatio_new > self.steerRatio:
-          self.steerRatio = self.steerRatio_new
-      else:
-        self.steerRatio = self.steerRatio_new
-        self.sR_delay_counter = 0
-    else:
-      self.steerRatio = self.sR[0]
-
-    print("steerRatio = ", self.steerRatio)
 
     self.LP.parse_model(sm['model'])
 
@@ -174,11 +133,11 @@ class PathPlanner():
 
       if self.lane_change_direction == LaneChangeDirection.left:
         torque_applied = sm['carState'].steeringTorque > 0 and sm['carState'].steeringPressed
-        if self.alc_nudge_less and 1.5 > self.pre_auto_LCA_timer > 1.0 and not lca_left:
+        if self.alc_nudge_less and self.pre_auto_LCA_timer > self.alc_nudge_less and not lca_left:
           torque_applied = True # Enable auto LCA only once after 1 sec 
       else:
         torque_applied = sm['carState'].steeringTorque < 0 and sm['carState'].steeringPressed
-        if self.alc_nudge_less and 1.5 > self.pre_auto_LCA_timer > 1.0 and not lca_right:
+        if self.alc_nudge_less and self.pre_auto_LCA_timer > self.alc_nudge_less and not lca_right:
           torque_applied = True # Enable auto LCA only once after 1 sec 
 
       lane_change_prob = self.LP.l_lane_change_prob + self.LP.r_lane_change_prob
@@ -256,15 +215,6 @@ class PathPlanner():
       self.libmpc.init_weights(MPC_COST_LAT.PATH, MPC_COST_LAT.LANE, MPC_COST_LAT.HEADING, self.steer_rate_cost)
 
     self.LP.update_d_poly(v_ego)
-
-
-    # TODO: Check for active, override, and saturation
-    # if active:
-    #   self.path_offset_i += self.LP.d_poly[3] / (60.0 * 20.0)
-    #   self.path_offset_i = clip(self.path_offset_i, -0.5,  0.5)
-    #   self.LP.d_poly[3] += self.path_offset_i
-    # else:
-    #   self.path_offset_i = 0.0
 
     # account for actuation delay
     self.cur_state = calc_states_after_delay(self.cur_state, v_ego, angle_steers - angle_offset, curvature_factor, self.steerRatio, CP.steerActuatorDelay)
