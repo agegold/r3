@@ -9,6 +9,7 @@ from selfdrive.car.gm.values import DBC, CAR, Ecu, ECU_FINGERPRINT, \
 from selfdrive.car.gm.carstate import CarState, CruiseButtons, get_powertrain_can_parser, get_chassis_can_parser
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, is_ecu_disconnected, gen_empty_fingerprint
 from selfdrive.car.interfaces import CarInterfaceBase
+from common.params import Params
 
 FOLLOW_AGGRESSION = 0.15 # (Acceleration/Decel aggression) Lower is more aggressive
 
@@ -101,7 +102,7 @@ class CarInterface(CarInterfaceBase):
     ret.enableCruise = False
     # GM port is considered a community feature, since it disables AEB;
     # TODO: make a port that uses a car harness and it only intercepts the camera
-    ret.communityFeature = True
+    ret.communityFeature = False
 
     # Presence of a camera on the object bus is ok.
     # Have to go to read_only if ASCM is online (ACC-enabled cars),
@@ -110,94 +111,66 @@ class CarInterface(CarInterfaceBase):
                        has_relay or \
                        candidate == CAR.CADILLAC_CT6
     ret.openpilotLongitudinalControl = ret.enableCamera
-    tire_stiffness_factor = 0.444  # not optimized yet
 
-    # Start with a baseline lateral tuning for all GM vehicles. Override tuning as needed in each model section below.
-    ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-    ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.2], [0.00]]
-    ret.lateralTuning.pid.kf = 0.00004   # full torque for 20 deg at 80mph means 0.00007818594
-    ret.steerRateCost = 1.0
-    ret.steerActuatorDelay = 0.2  # Default delay, not measured yet
-
-    if candidate == CAR.VOLT:
-      # supports stop and go, but initial engage must be above 18mph (which include conservatism)
-      ret.minEnableSpeed = 8 * CV.MPH_TO_MS
-      ret.mass = 1607. + STD_CARGO_KG
-      ret.safetyModel = car.CarParams.SafetyModel.gm
-      ret.wheelbase = 2.69
-      ret.steerRatio = 15.7
-      ret.steerRatioRear = 0.
-      ret.centerToFront = ret.wheelbase * 0.4 # wild guess
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.12], [0.05]]
-      ret.steerRateCost = 0.7
-
-    elif candidate == CAR.BOLT:
-      # initial engage unkown - copied from Volt. Stop and go unknown.
-      ret.minEnableSpeed = -1.
-      ret.mass = 1616. + STD_CARGO_KG
-      ret.safetyModel = car.CarParams.SafetyModel.gm
-      ret.wheelbase = 2.60096
-      ret.steerRatio = 16.5  #Bolt EV has a 16.8 in the spec, but with this value I can see oversteer at sharp corner during openpilot engage.
-      ret.steerRatioRear = 0.
-      ret.centerToFront = ret.wheelbase * 0.4 # wild guess
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.1], [0.01]]
-
-    elif candidate == CAR.MALIBU:
-      # supports stop and go, but initial engage must be above 18mph (which include conservatism)
-      ret.minEnableSpeed = 18 * CV.MPH_TO_MS
-      ret.mass = 1496. + STD_CARGO_KG
-      ret.safetyModel = car.CarParams.SafetyModel.gm
-      ret.wheelbase = 2.83
-      ret.steerRatio = 15.8
-      ret.steerRatioRear = 0.
-      ret.centerToFront = ret.wheelbase * 0.4 # wild guess
-
-    elif candidate == CAR.HOLDEN_ASTRA:
-      ret.mass = 1363. + STD_CARGO_KG
-      ret.wheelbase = 2.662
-      # Remaining parameters copied from Volt for now
-      ret.centerToFront = ret.wheelbase * 0.4
-      ret.minEnableSpeed = 18 * CV.MPH_TO_MS
-      ret.safetyModel = car.CarParams.SafetyModel.gm
-      ret.steerRatio = 15.7
-      ret.steerRatioRear = 0.
-
-    elif candidate == CAR.ACADIA:
-      ret.minEnableSpeed = -1. # engage speed is decided by pcm
-      ret.mass = 4353. * CV.LB_TO_KG + STD_CARGO_KG
-      ret.safetyModel = car.CarParams.SafetyModel.gm
-      ret.wheelbase = 2.86
-      ret.steerRatio = 14.4  #end to end is 13.46
-      ret.steerRatioRear = 0.
-      ret.centerToFront = ret.wheelbase * 0.4
-
-    elif candidate == CAR.BUICK_REGAL:
-      ret.minEnableSpeed = 18 * CV.MPH_TO_MS
-      ret.mass = 3779. * CV.LB_TO_KG + STD_CARGO_KG # (3849+3708)/2
-      ret.safetyModel = car.CarParams.SafetyModel.gm
-      ret.wheelbase = 2.83 #111.4 inches in meters
-      ret.steerRatio = 14.4 # guess for tourx
-      ret.steerRatioRear = 0.
-      ret.centerToFront = ret.wheelbase * 0.4 # guess for tourx
-
-    elif candidate == CAR.CADILLAC_ATS:
-      ret.minEnableSpeed = 18 * CV.MPH_TO_MS
-      ret.mass = 1601. + STD_CARGO_KG
-      ret.safetyModel = car.CarParams.SafetyModel.gm
-      ret.wheelbase = 2.78
-      ret.steerRatio = 15.3
-      ret.steerRatioRear = 0.
-      ret.centerToFront = ret.wheelbase * 0.49
-
-    elif candidate == CAR.CADILLAC_CT6:
-      # engage speed is decided by pcm
-      ret.minEnableSpeed = -1.
-      ret.mass = 4016. * CV.LB_TO_KG + STD_CARGO_KG
-      ret.safetyModel = car.CarParams.SafetyModel.cadillac
-      ret.wheelbase = 3.11
-      ret.steerRatio = 14.6   # it's 16.3 without rear active steering
-      ret.steerRatioRear = 0. # TODO: there is RAS on this car!
-      ret.centerToFront = ret.wheelbase * 0.465
+    tire_stiffness_factor = float(int(Params().get('TireStiffnessFactorAdj')) * 0.01)
+    ret.steerRateCost = float(int(Params().get('SteerRateCostAdj')) * 0.01)
+    ret.steerActuatorDelay = float(int(Params().get('SteerActuatorDelayAdj')) * 0.01)
+    ret.steerLimitTimer = float(int(Params().get('SteerLimitTimerAdj')) * 0.01)
+    
+    PidKp = float(int(Params().get('PidKp')) * 0.01)
+    PidKi = float(int(Params().get('PidKi')) * 0.001)
+    PidKf = float(int(Params().get('PidKf')) * 0.00001)
+    OuterLoopGain = float(int(Params().get('OuterLoopGain')) * 0.1)
+    InnerLoopGain = float(int(Params().get('InnerLoopGain')) * 0.1)
+    TimeConstant = float(int(Params().get('TimeConstant')) * 0.1)
+    ActuatorEffectiveness = float(int(Params().get('ActuatorEffectiveness')) * 0.1)
+    Scale = float(int(Params().get('Scale')) * 1.0)
+    LqrKi = float(int(Params().get('LqrKi')) * 0.001)
+    DcGain = float(int(Params().get('DcGain')) * 0.0001)
+    
+    ret.steerRatio = float(int(Params().get('SteerRatioAdj')) * 0.1)
+    
+    if int(Params().get('LateralControlMethod')) == 0:
+      if candidate == CAR.BOLT:
+        # initial engage unkown - copied from Volt. Stop and go unknown.
+        ret.lateralTuning.pid.kf = PidKf
+        ret.minEnableSpeed = -1.
+        ret.mass = 1616. + STD_CARGO_KG
+        ret.safetyModel = car.CarParams.SafetyModel.gm
+        ret.wheelbase = 2.60096
+        ret.steerRatioRear = 0.
+        ret.centerToFront = ret.wheelbase * 0.4 # wild guess
+        ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[PidKp], [PidKi]]
+    elif int(Params().get('LateralControlMethod')) == 1:
+      if candidate == CAR.BOLT:
+        ret.lateralTuning.init('indi')
+        ret.lateralTuning.indi.innerLoopGain = InnerLoopGain
+        ret.lateralTuning.indi.outerLoopGain = OuterLoopGain
+        ret.lateralTuning.indi.timeConstant = TimeConstant
+        ret.lateralTuning.indi.actuatorEffectiveness = ActuatorEffectiveness
+        ret.minEnableSpeed = -1.
+        ret.mass = 1616. + STD_CARGO_KG
+        ret.safetyModel = car.CarParams.SafetyModel.gm
+        ret.wheelbase = 2.60096
+        ret.steerRatioRear = 0.
+        ret.centerToFront = ret.wheelbase * 0.4 # wild guess
+    elif int(Params().get('LateralControlMethod')) == 2:
+      if candidate == CAR.BOLT:
+        ret.lateralTuning.init('lqr')
+        ret.lateralTuning.lqr.scale = Scale
+        ret.lateralTuning.lqr.ki = LqrKi
+        ret.lateralTuning.lqr.a = [0., 1., -0.22619643, 1.21822268]
+        ret.lateralTuning.lqr.b = [-1.92006585e-04, 3.95603032e-05]
+        ret.lateralTuning.lqr.c = [1., 0.]
+        ret.lateralTuning.lqr.k = [-100., 450.]
+        ret.lateralTuning.lqr.l = [0.22, 0.318]
+        ret.lateralTuning.lqr.dcGain = DcGain
+        ret.minEnableSpeed = -1.
+        ret.mass = 1616. + STD_CARGO_KG
+        ret.safetyModel = car.CarParams.SafetyModel.gm
+        ret.wheelbase = 2.60096
+        ret.steerRatioRear = 0.
+        ret.centerToFront = ret.wheelbase * 0.4 # wild guess
 
 
     # TODO: get actual value, for now starting with reasonable value for
@@ -226,7 +199,6 @@ class CarInterface(CarInterfaceBase):
     ret.stoppingControl = True
     ret.startAccel = 0.8
 
-    ret.steerLimitTimer = 0.4
     ret.radarTimeStep = 0.0667  # GM radar runs at 15Hz instead of standard 20Hz
     ret.steerControlType = car.CarParams.SteerControlType.torque
 

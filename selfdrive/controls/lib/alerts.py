@@ -62,8 +62,8 @@ class Alert():
 ALERTS = [
   Alert(
       "turningIndicatorOn",
-      "턴 시그널 작동 중 핸들을 잡아주세요",
-      "",
+      "저속 방향지시등 작동 중",
+      "자동조향이 일시 비활성화 됩니다 직접 조향하세요",
       AlertStatus.userPrompt, AlertSize.small,
       Priority.HIGH, VisualAlert.none, AudibleAlert.none, 0., 0., .1),
   Alert(
@@ -79,14 +79,14 @@ ALERTS = [
       "",
       "",
       AlertStatus.normal, AlertSize.none,
-      Priority.MID, VisualAlert.none, AudibleAlert.chimeEngage, 4., 0., 0.),
+      Priority.MID, VisualAlert.none, AudibleAlert.chimeEngage, .2., 0., 0.),
 
   Alert(
       "disable",
       "",
       "",
       AlertStatus.normal, AlertSize.none,
-      Priority.MID, VisualAlert.none, AudibleAlert.chimeDisengage, 4., 0., 0.),
+      Priority.MID, VisualAlert.none, AudibleAlert.chimeDisengage, .2., 0., 0.),
 
   Alert(
       "fcw",
@@ -107,7 +107,14 @@ ALERTS = [
       "핸들을 잡아주세요",
       "스티어링 토크가 높습니다",
       AlertStatus.userPrompt, AlertSize.mid,
-      Priority.LOW, VisualAlert.none, AudibleAlert.chimeWarning1, 1., 2., 3.),
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 1., 2., 3.),
+
+  Alert(
+      "steerTorqueOver",
+      "운전자 핸들 조향중",
+      "스티어링 토크 일시 비활성화",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 1., 2., 3.),
 
   Alert(
       "steerTempUnavailable",
@@ -125,7 +132,7 @@ ALERTS = [
 
   Alert(
       "preDriverDistracted",
-      "도로상황에 주의를 기울이세요 : 주행 산만",
+      "도로상황에 주의를 기울이세요",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .0, .1, .1, alert_rate=0.75),
@@ -133,14 +140,14 @@ ALERTS = [
   Alert(
       "promptDriverDistracted",
       "도로상황에 주의하세요",
-      "주행 산만",
+      "전방주시 불안",
       AlertStatus.userPrompt, AlertSize.mid,
       Priority.MID, VisualAlert.steerRequired, AudibleAlert.chimeRoadWarning, 4., .1, .1),
 
   Alert(
       "driverDistracted",
       "경고: 조향제어가 즉시 해제됩니다",
-      "주행 산만",
+      "전방주시 매우 불안",
       AlertStatus.critical, AlertSize.full,
       Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.chimeWarningRepeat, .1, .1, .1),
 
@@ -294,9 +301,9 @@ ALERTS = [
   Alert(
       "posenetInvalid",
       "핸들을 잡아주세요",
-      "전방 영상 인식이 불확실합니다",
+      "전방 영상 인식이 불안합니다",
       AlertStatus.userPrompt, AlertSize.mid,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimeViewUncertain, 6., 2., 3.),
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimeWarning1, 6., 2., 3.),
 
   # Non-entry only alerts
   Alert(
@@ -379,7 +386,7 @@ ALERTS = [
   Alert(
       "tooDistractedNoEntry",
       "오픈파일럿 사용 불가",
-      "과도한 운전 산만",
+      "과도한 전방주시 불안",
       AlertStatus.normal, AlertSize.mid,
       Priority.LOW, VisualAlert.none, AudibleAlert.chimeError, .4, 2., 3.),
 

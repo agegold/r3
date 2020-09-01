@@ -1,10 +1,9 @@
 from common.numpy_fast import interp
 import numpy as np
-from selfdrive.kegman_conf import kegman_conf
 from cereal import log
+from common.params import Params
 
-kegman = kegman_conf()
-CAMERA_OFFSET = float(kegman.conf['cameraOffset'])  # m from center car to camera
+CAMERA_OFFSET = float(int(Params().get('CameraOffsetAdj')) * 0.001)  # m from center car to camera
 
 #zorrobyte
 def mean(numbers): 
@@ -79,10 +78,10 @@ class LanePlanner():
       self.l_lane_change_prob = md.meta.desirePrediction[log.PathPlan.Desire.laneChangeLeft - 1]
       self.r_lane_change_prob = md.meta.desirePrediction[log.PathPlan.Desire.laneChangeRight - 1]
 
-  def update_d_poly(self, lean_offset):
+  def update_d_poly(self, v_ego):
     # only offset left and right lane lines; offsetting p_poly does not make sense
-    self.l_poly[3] += CAMERA_OFFSET + lean_offset
-    self.r_poly[3] += CAMERA_OFFSET + lean_offset
+    self.l_poly[3] += CAMERA_OFFSET
+    self.r_poly[3] += CAMERA_OFFSET
 
     # Find current lanewidth
     #self.lane_width_certainty += 0.05 * (self.l_prob * self.r_prob - self.lane_width_certainty)
