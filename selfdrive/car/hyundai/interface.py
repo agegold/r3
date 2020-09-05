@@ -839,10 +839,17 @@ class CarInterface(CarInterfaceBase):
     if self.CS.steer_error:
       events.append(create_event('steerTempUnavailable', [ET.NO_ENTRY, ET.WARNING]))
 
-    if ret.cruiseState.enabled and not self.cruise_enabled_prev:
-      events.append(create_event('pcmEnable', [ET.ENABLE]))
-    elif not ret.cruiseState.enabled:
-      events.append(create_event('pcmDisable', [ET.USER_DISABLE]))
+    if ret.cruiseState.enabled != self.cruise_enabled_prev:
+        if ret.cruiseState.enabled:
+            events.append(create_event('pcmEnable', [ET.ENABLE]))
+        else:
+            events.append(create_event('pcmDisable', [ET.USER_DISABLE]))
+        self.cruise_enabled_prev = ret.cruiseState.enabled
+    elif  ret.cruiseState.enabled:
+        if self.turning_indicator_alert:
+          events.append(create_event('turningIndicatorOn', [ET.WARNING]))
+        elif self.CC.steer_torque_over:
+          events.append(create_event('steerTorqueOver', [ET.WARNING]))          
 
     # disable on pedals rising edge or when brake is pressed and speed isn't zero
     if ((ret.gasPressed and not self.gas_pressed_prev) or \
@@ -854,8 +861,6 @@ class CarInterface(CarInterfaceBase):
 
     if self.low_speed_alert and not self.CS.mdps_bus :
       events.append(create_event('belowSteerSpeed', [ET.WARNING]))
-    if self.turning_indicator_alert:
-      events.append(create_event('turningIndicatorOn', [ET.WARNING]))
 #    if self.lkas_button_alert:
 #      events.append(create_event('lkasButtonOff', [ET.WARNING]))
     #TODO Varible for min Speed for LCA
@@ -873,7 +878,7 @@ class CarInterface(CarInterfaceBase):
 
     return ret.as_reader()
 
-  def apply(self, c):
+  def apply(self, c, sm, LaC):
     can_sends = self.CC.update(c.enabled, self.CS, self.frame, c.actuators,
                                c.cruiseControl.cancel, c.hudControl.visualAlert, c.hudControl.leftLaneVisible,
                                c.hudControl.rightLaneVisible, c.hudControl.leftLaneDepart, c.hudControl.rightLaneDepart)

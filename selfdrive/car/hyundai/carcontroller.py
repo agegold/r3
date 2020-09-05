@@ -1,4 +1,4 @@
-from cereal import car
+from cereal import car, log
 from selfdrive.config import Conversions as CV
 from common.numpy_fast import clip
 from selfdrive.car import apply_std_steer_torque_limits
@@ -8,6 +8,7 @@ from selfdrive.car.hyundai.values import Buttons, CAR
 from opendbc.can.packer import CANPacker
 from common.params import Params
 
+import common.log as trace1
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 
 class SteerLimitParams:
@@ -82,6 +83,18 @@ class CarController():
     self.lkas_button = 1
     self.lkas_button_last = 0
     self.longcontrol = 0 #TODO: make auto
+    self.steer_torque_over_timer = 0
+    self.steer_torque_over = False
+    
+    self.SC = SpdController()
+    self.sc_wait_timer2 = 0
+    self.sc_active_timer2 = 0     
+    self.sc_btn_type = Buttons.NONE
+    self.sc_clu_speed = 0
+    self.traceCC = trace1.Loger("CarCtrl")
+    
+    self.params = Params()
+    self.speed_control_enabled = self.params.get('SpeedControlEnabled') == b'1'
 
   def update(self, enabled, CS, frame, actuators, pcm_cancel_cmd, visual_alert,
               left_line, right_line, left_lane_depart, right_lane_depart):
@@ -93,8 +106,11 @@ class CarController():
 
     apply_accel, self.accel_steady = accel_hysteresis(apply_accel, self.accel_steady)
     apply_accel = clip(apply_accel * ACCEL_SCALE, ACCEL_MIN, ACCEL_MAX)
+    if abs( CS.steer_torque_driver ) > 100:
+      self.steer_torque_over_timer = 20
 
-    lkas_active = enabled
+    lkas_active = enabled and abs(CS.angle_steers) < 90.
+
 
     # Disable steering while turning blinker on and speed below 60 kph
     if CS.left_blinker_on or CS.right_blinker_on:
@@ -122,14 +138,28 @@ class CarController():
     apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last, CS.steer_torque_driver, SteerLimitParams)
     self.steer_rate_limited = new_steer != apply_steer
 
-    if self.turning_signal_timer and CS.v_ego < (60 * CV.KPH_TO_MS):
+    if (self.turning_signal_timer and CS.v_ego < (60 * CV.KPH_TO_MS)) or (self.steer_torque_over_timer):
       lkas_active = 0
     if self.turning_signal_timer:
       self.turning_signal_timer -= 1
+      
+    if self.steer_torque_over_timer:
+      self.steer_torque_over_timer -= 1
+
     if not lkas_active:
       apply_steer = 0
       
     steer_req = 1 if apply_steer else 0
+
+    #self.model_speed = self.SC.calc_va( sm, CS.v_ego )
+    dRel, yRel, vRel = self.SC.get_lead( sm, CS )
+    vRel = int(vRel * 3.6 + 0.5)
+  
+    lead_objspd = CS.lead_objspd
+    str_log1 = 'cv={:3.0f} torg:{:5.0f} obj={:3.0f}:{:2.0f}'.format( LaC.v_curvature, apply_steer, vRel, dRel  )
+    str_log2 = 'steer={:5.0f} sccInfo={:3.0f} lkas={:1.0f} sw{:.0f}/{:.0f}'.format( CS.steer_torque_driver, CS.sccInfoDisp, CS.lkas_LdwsSysState, CS.clu_CruiseSwState, CS.cruise_set_mode  )
+    trace1.printf( '{} {}'.format( str_log1, str_log2 ) )
+
 
     self.apply_accel_last = apply_accel
     self.apply_steer_last = apply_steer
@@ -139,7 +169,7 @@ class CarController():
             left_line, right_line,left_lane_depart, right_lane_depart)
 
     clu11_speed = CS.clu11["CF_Clu_Vanz"]
-    enabled_speed = 38 if CS.is_set_speed_in_mph  else 60
+    enabled_speed = 38 if CS.is_set_speed_in_mph  else 55
     if clu11_speed > enabled_speed or not lkas_active:
       enabled_speed = clu11_speed
 
@@ -147,10 +177,10 @@ class CarController():
 
     if frame == 0: # initialize counts from last received count signals
       self.lkas11_cnt = CS.lkas11["CF_Lkas_MsgCount"] + 1
-      self.scc12_cnt = CS.scc12["CR_VSM_Alive"] + 1 if not CS.no_radar else 0
+      #self.scc12_cnt = CS.scc12["CR_VSM_Alive"] + 1 if not CS.no_radar else 0
 
     self.lkas11_cnt %= 0x10
-    self.scc12_cnt %= 0xF
+    #self.scc12_cnt %= 0xF
     self.clu11_cnt = frame % 0x10
     self.mdps12_cnt = frame % 0x100
 
@@ -188,6 +218,38 @@ class CarController():
     # reset lead distnce after the car starts moving
     elif self.last_lead_distance != 0:
       self.last_lead_distance = 0  
+    elif CS.driverOverride or not CS.pcm_acc_status or CS.clu_CruiseSwState == 1 or CS.clu_CruiseSwState == 2:
+      self.resume_cnt = 0
+      self.sc_btn_type = Buttons.NONE
+      self.sc_wait_timer2 = 10
+      self.sc_active_timer2 = 0
+    elif self.sc_wait_timer2:
+      self.sc_wait_timer2 -= 1
+    elif self.speed_control_enabled:
+      #acc_mode, clu_speed = self.long_speed_cntrl( v_ego_kph, CS, actuators )
+      btn_type, clu_speed = self.SC.update( v_ego_kph, CS, sm, actuators, dRel, yRel, vRel, LaC.v_curvature )   # speed controller spdcontroller.py
+
+      if CS.clu_Vanz < 5:
+        self.sc_btn_type = Buttons.NONE
+      elif self.sc_btn_type != Buttons.NONE:
+        pass
+      elif btn_type != Buttons.NONE:
+        self.resume_cnt = 0
+        self.sc_active_timer2 = 0
+        self.sc_btn_type = btn_type
+        self.sc_clu_speed = clu_speed
+
+      if self.sc_btn_type != Buttons.NONE:
+        self.sc_active_timer2 += 1
+        if self.sc_active_timer2 > 10:
+          self.sc_wait_timer2 = 5
+          self.resume_cnt = 0
+          self.sc_active_timer2 = 0
+          self.sc_btn_type = Buttons.NONE          
+        else:
+          #self.traceCC.add( 'sc_btn_type={}  clu_speed={}  set={:.0f} vanz={:.0f}'.format( self.sc_btn_type, self.sc_clu_speed,  CS.VSetDis, CS.clu_Vanz  ) )
+          can_sends.append(create_clu11(self.packer, CS.scc_bus, CS.clu11, self.sc_btn_type, self.sc_clu_speed, self.resume_cnt))
+          self.resume_cnt += 1
 
     self.lkas11_cnt += 1
 

@@ -5,6 +5,7 @@ from selfdrive.config import Conversions as CV
 from common.kalman.simple_kalman import KF1D
 from common.realtime import DT_CTRL
 
+import common.log as trace1
 GearShifter = car.CarState.GearShifter
 
 def get_can_parser(CP):
@@ -106,6 +107,7 @@ def get_can_parser(CP):
       ("VSetDis", "SCC11", 0),
       ("SCCInfoDisplay", "SCC11", 0),
       ("ACC_ObjDist", "SCC11", 0),
+      ("ACC_ObjRelSpd", "SCC11", 0),
       ("TauGapSet", "SCC11", 0),
 
       ("ACCMode", "SCC12", 0),
@@ -190,6 +192,7 @@ def get_can2_parser(CP):
       ("VSetDis", "SCC11", 0),
       ("SCCInfoDisplay", "SCC11", 0),
       ("ACC_ObjDist", "SCC11", 0),
+      ("ACC_ObjRelSpd", "SCC11", 0),
       ("TauGapSet", "SCC11", 0),
 
       ("ACCMode", "SCC12", 0),
@@ -251,6 +254,7 @@ def get_camera_parser(CP):
       ("VSetDis", "SCC11", 0),
       ("SCCInfoDisplay", "SCC11", 0),
       ("ACC_ObjDist", "SCC11", 0),
+      ("ACC_ObjRelSpd", "SCC11", 0),
       ("TauGapSet", "SCC11", 0),
 
       ("ACCMode", "SCC12", 0),
@@ -312,6 +316,58 @@ class CarState():
 
     v_ego_x = self.v_ego_kf.update(v_ego_raw)
     return float(v_ego_x[0]), float(v_ego_x[1])
+
+
+  def update_cruiseSW(self ):
+    cruise_set_speed_kph = self.cruise_set_speed_kph
+    delta_vsetdis = 0
+    if self.pcm_acc_status:
+      delta_vsetdis = abs(self.VSetDis - self.prev_VSetDis)
+      if self.prev_clu_CruiseSwState != self.clu_CruiseSwState:
+        if self.clu_CruiseSwState:
+          self.prev_VSetDis = int(self.VSetDis)
+        elif self.driverAcc_time:
+          cruise_set_speed_kph =  int(self.VSetDis)          
+        elif self.prev_clu_CruiseSwState == 1:   # up
+          if self.curise_set_first:
+            self.curise_set_first = 0
+            cruise_set_speed_kph =  int(self.VSetDis)
+          elif delta_vsetdis > 5:
+            cruise_set_speed_kph = self.VSetDis
+          elif not self.curise_sw_check:
+            cruise_set_speed_kph += 1
+        elif self.prev_clu_CruiseSwState == 2:  # dn
+          if self.curise_set_first:
+            self.curise_set_first = 0
+            cruise_set_speed_kph =  int(self.clu_Vanz)
+          elif delta_vsetdis > 5:
+            cruise_set_speed_kph =  int(self.VSetDis)
+          elif not self.curise_sw_check:
+            cruise_set_speed_kph -= 1
+
+        self.prev_clu_CruiseSwState = self.clu_CruiseSwState
+      elif self.clu_CruiseSwState and delta_vsetdis > 0:
+        self.curise_sw_check = True
+        cruise_set_speed_kph =  int(self.VSetDis)
+
+    else:
+      self.curise_sw_check = False
+      self.curise_set_first = 1
+      self.prev_VSetDis = int(self.VSetDis)
+      cruise_set_speed_kph = self.VSetDis
+      if self.prev_clu_CruiseSwState != self.clu_CruiseSwState:
+        if self.clu_CruiseSwState == 4:
+          self.cruise_set_mode += 1
+          if self.cruise_set_mode > 2:
+            self.cruise_set_mode = 0
+        self.prev_clu_CruiseSwState = self.clu_CruiseSwState
+      
+    trace1.cruise_set_mode = self.cruise_set_mode
+
+    if cruise_set_speed_kph < 30:
+      cruise_set_speed_kph = 30
+
+    return cruise_set_speed_kph
 	
   def update(self, cp, cp2, cp_cam):
 
@@ -347,13 +403,19 @@ class CarState():
 
     self.low_speed_lockout = self.v_ego_raw < 1.0
 
+
     self.clu_Vanz = cp.vl["CLU11"]["CF_Clu_Vanz"]
+    self.clu_CruiseSwState = cp.vl["CLU11"]["CF_Clu_CruiseSwState"]
+    self.clu_CruiseSwMain = cp.vl["CLU11"]["CF_Clu_CruiseSwMain"]
+    self.clu_SldMainSW = cp.vl["CLU11"]["CF_Clu_SldMainSW"]
     self.v_ego = self.clu_Vanz * CV.KPH_TO_MS
+
+    self.VSetDis = cp_scc.vl["SCC11"]['VSetDis']
 
     self.is_set_speed_in_mph = int(cp.vl["CLU11"]["CF_Clu_SPEED_UNIT"])
     speed_conv = CV.MPH_TO_MS if self.is_set_speed_in_mph else CV.KPH_TO_MS
-    self.cruise_set_speed = cp_scc.vl["SCC11"]['VSetDis'] * speed_conv if not self.no_radar else \
-                                         (cp.vl["LVR12"]["CF_Lvr_CruiseSet"] * speed_conv)
+    #self.cruise_set_speed = self.VSetDis * speed_conv if not self.no_radar else \
+    #                                     (cp.vl["LVR12"]["CF_Lvr_CruiseSet"] * speed_conv)
     self.standstill = not self.v_ego_raw > 0.1
 
     self.angle_steers = cp_sas.vl["SAS11"]['SAS_Angle']
@@ -370,7 +432,12 @@ class CarState():
     self.steer_torque_driver = cp_mdps.vl["MDPS12"]['CR_Mdps_StrColTq']
     self.steer_torque_motor = cp_mdps.vl["MDPS12"]['CR_Mdps_OutTq']
     self.stopped = cp_scc.vl["SCC11"]['SCCInfoDisplay'] == 4. if not self.no_radar else False
+
+    self.sccInfoDisp = cp_scc.vl["SCC11"]['SCCInfoDisplay']
+    self.stopped = self.sccInfoDisp == 4. if not self.no_radar else False
     self.lead_distance = cp_scc.vl["SCC11"]['ACC_ObjDist'] if not self.no_radar else 0
+    self.lead_objspd = cp_scc.vl["SCC11"]['ACC_ObjRelSpd'] if not self.no_radar else 0
+    self.lead_objspd = self.lead_objspd * CV.MS_TO_KPH
 
     self.user_brake = 0
 
@@ -445,3 +512,6 @@ class CarState():
     self.clu11 = cp.vl["CLU11"]
     self.scc12 = cp_scc.vl["SCC12"]
     self.mdps12 = cp_mdps.vl["MDPS12"]
+
+    self.cruise_set_speed_kph = self.update_cruiseSW()
+    self.cruise_set_speed = self.cruise_set_speed_kph * speed_conv
