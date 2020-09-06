@@ -305,7 +305,6 @@ class CarState():
 
     self.clu_CruiseSwState = 0
 
-
     self.cruise_set_speed = 0
     self.cruise_set_speed_kph = 0
     self.curise_set_first = 0
@@ -315,6 +314,8 @@ class CarState():
     self.prev_VSetDis = 30
 
     self.cruise_set_mode = 0
+
+    self.driverAcc_time = 0
 
     # Q = np.matrix([[10.0, 0.0], [0.0, 100.0]])
     # R = 1e3
@@ -528,3 +529,11 @@ class CarState():
 
     self.cruise_set_speed_kph = self.update_cruiseSW()
     self.cruise_set_speed = self.cruise_set_speed_kph * speed_conv
+
+    self.driverOverride = cp.vl["TCS13"]["DriverOverride"]     # 1 Acc,  2 bracking, 0 Normal
+
+    if self.driverOverride == 1:
+      self.driverAcc_time = 100
+
+    if self.driverAcc_time:
+      self.driverAcc_time -= 1
