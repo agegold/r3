@@ -590,7 +590,7 @@ def controlsd_thread(sm=None, pm=None, can_sock=None):
       state, soft_disable_timer, v_cruise_kph, v_cruise_kph_last = \
         state_transition(sm.frame, CS, CP, state, events, soft_disable_timer, v_cruise_kph, AM)
 
-      LaC.update_state( sm, CS )
+      #LaC.update_state( sm, CS )
       prof.checkpoint("State transition")
 
     # Compute actuators (runs PID loops and lateral MPC)
