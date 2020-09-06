@@ -7,6 +7,9 @@ from common.numpy_fast import clip
 from common.realtime import sec_since_boot, set_realtime_priority, Ratekeeper, DT_CTRL
 from common.profiler import Profiler
 from common.params import Params
+
+import common.log as  trace1
+
 import cereal.messaging as messaging
 from selfdrive.config import Conversions as CV
 from selfdrive.boardd.boardd import can_list_to_can_capnp
@@ -395,6 +398,8 @@ def data_send(sm, pm, CS, CI, CP, VM, state, events, actuators, v_cruise_kph, rk
     "mapValid": sm['plan'].mapValid,
     "forceDecel": bool(force_decel),
     "canErrorCounter": can_error_counter,
+    "alertTextMsg1": str(trace1.global_alertTextMsg1),
+    "alertTextMsg2": str(trace1.global_alertTextMsg2),
   }
 
   if CP.lateralTuning.which() == 'pid':
