@@ -93,6 +93,7 @@ class CarController():
               left_line, right_line, left_lane_depart, right_lane_depart, sm, LaC):
 
     # *** compute control surfaces ***
+    v_ego_kph = CS.v_ego * CV.MS_TO_KPH
 
     # gas and brake
     apply_accel = actuators.gas - actuators.brake
