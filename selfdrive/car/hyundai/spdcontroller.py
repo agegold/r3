@@ -211,7 +211,7 @@ class SpdController():
     if CS.driverAcc_time:
       lead_set_speed = CS.clu_Vanz
       lead_wait_cmd = 50
-      str3 = 'driver acc speed={:3.0f} time={:3.0f}'.format( lead_set_speed, lead_wait_cmd )
+      #str3 = 'driver acc speed={:3.0f} time={:3.0f}'.format( lead_set_speed, lead_wait_cmd )
     # 1. 거리 유지.
     elif d_delta < 0:
     # 선행 차량이 가까이 있으면.
@@ -229,21 +229,21 @@ class SpdController():
         if lead_set_speed < 30:
             lead_set_speed = 30
 
-      str3 = '<{:.0f} obj={:.0f} speed={:3.0f} time={:3.0f}'.format( d_delta, lead_objspd, lead_set_speed, lead_wait_cmd )
-      self.SC.add(  str3 )
+      #str3 = '<{:.0f} obj={:.0f} speed={:3.0f} time={:3.0f}'.format( d_delta, lead_objspd, lead_set_speed, lead_wait_cmd )
+      #self.SC.add(  str3 )
     # 선행차량이 멀리 있으면.
     elif lead_objspd < -10:  
         lead_wait_cmd, lead_set_speed = self.get_tm_speed( CS, 100, -1 )
-        str3 = '{:.0f} speed={:.0f} time={:3.0f}'.format( lead_objspd, lead_set_speed, lead_wait_cmd )
-        self.SC.add(  str3 )         
+        #str3 = '{:.0f} speed={:.0f} time={:3.0f}'.format( lead_objspd, lead_set_speed, lead_wait_cmd )
+        #self.SC.add(  str3 )         
     elif lead_objspd < -5:
       lead_wait_cmd, lead_set_speed = self.get_tm_speed( CS, 150, -1 )        
-      str3 = '{:.0f} speed={:.0f} time={:3.0f}'.format( lead_objspd, lead_set_speed, lead_wait_cmd )
-      self.SC.add(  str3 )         
+      #str3 = '{:.0f} speed={:.0f} time={:3.0f}'.format( lead_objspd, lead_set_speed, lead_wait_cmd )
+      #self.SC.add(  str3 )         
     elif lead_objspd < -1:
       lead_wait_cmd, lead_set_speed = self.get_tm_speed( CS, 200, -1 )           
-      str3 = '{:.0f} speed={:.0f} time={:3.0f}'.format( lead_objspd, lead_set_speed, lead_wait_cmd )
-      self.SC.add(  str3 )         
+      #str3 = '{:.0f} speed={:.0f} time={:3.0f}'.format( lead_objspd, lead_set_speed, lead_wait_cmd )
+      #self.SC.add(  str3 )         
     elif CS.cruise_set_speed_kph > CS.clu_Vanz:
       
       # 선행 차량이 가속하고 있으면.
@@ -263,8 +263,9 @@ class SpdController():
         lead_wait_cmd, lead_set_speed = self.get_tm_speed( CS, 50, 1 )
 
       if lead_wait_cmd != 600:
-        str3 = 'acc speed={:3.0f} time={:3.0f}'.format( lead_set_speed, lead_wait_cmd )
-        self.SC.add(  str3 )
+        pass
+        #str3 = 'acc speed={:3.0f} time={:3.0f}'.format( lead_set_speed, lead_wait_cmd )
+        #self.SC.add(  str3 )
 
     return  lead_wait_cmd, lead_set_speed
 
@@ -345,7 +346,7 @@ class SpdController():
     tm_sample = self.Timer1.sampleTime()
 
 
-    str3 = 'curvature={:3.0f} dest={:3.0f}/{:3.0f} heart={:.0f} '.format( model_speed, target_set_speed, self.long_wait_timer,  tm_sample )
-    trace1.printf2(  str3 )
+    #str3 = 'curvature={:3.0f} dest={:3.0f}/{:3.0f} heart={:.0f} '.format( model_speed, target_set_speed, self.long_wait_timer,  tm_sample )
+    #trace1.printf2(  str3 )
 
     return btn_type, set_speed

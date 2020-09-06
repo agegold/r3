@@ -149,9 +149,9 @@ class CarController():
     vRel = int(vRel * 3.6 + 0.5)
   
     lead_objspd = CS.lead_objspd
-    str_log1 = 'cv={:3.0f} torg:{:5.0f} obj={:3.0f}:{:2.0f}'.format( LaC.v_curvature, apply_steer, vRel, dRel  )
-    str_log2 = 'steer={:5.0f} sccInfo={:3.0f} lkas={:1.0f} sw{:.0f}/{:.0f}'.format( CS.steer_torque_driver, CS.sccInfoDisp, CS.lkas_LdwsSysState, CS.clu_CruiseSwState, CS.cruise_set_mode  )
-    trace1.printf( '{} {}'.format( str_log1, str_log2 ) )
+    #str_log1 = 'cv={:3.0f} torg:{:5.0f} obj={:3.0f}:{:2.0f}'.format( LaC.v_curvature, apply_steer, vRel, dRel  )
+    #str_log2 = 'steer={:5.0f} sccInfo={:3.0f} lkas={:1.0f} sw{:.0f}/{:.0f}'.format( CS.steer_torque_driver, CS.sccInfoDisp, CS.lkas_LdwsSysState, CS.clu_CruiseSwState, CS.cruise_set_mode  )
+    #trace1.printf( '{} {}'.format( str_log1, str_log2 ) )
 
 
     self.apply_accel_last = apply_accel
