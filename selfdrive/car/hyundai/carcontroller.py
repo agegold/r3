@@ -5,20 +5,12 @@ from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.hyundai.spdcontroller  import SpdController
 from selfdrive.car.hyundai.hyundaican import create_lkas11, create_clu11, \
                                              create_scc12, create_mdps12
-from selfdrive.car.hyundai.values import Buttons, CAR
+from selfdrive.car.hyundai.values import Buttons, CAR, SteerLimitParams
 from opendbc.can.packer import CANPacker
 from common.params import Params
 
 import common.log as trace1
 VisualAlert = car.CarControl.HUDControl.VisualAlert
-
-class SteerLimitParams:
-  STEER_MAX = int(Params().get('SteerMaxAdj'))   # 409 is the max, 255 is stock
-  STEER_DELTA_UP = int(Params().get('SteerDeltaUpAdj'))
-  STEER_DELTA_DOWN = int(Params().get('SteerDeltaDownAdj'))
-  STEER_DRIVER_ALLOWANCE = 50
-  STEER_DRIVER_MULTIPLIER = 2
-  STEER_DRIVER_FACTOR = 1
 
 # Accel limits
 ACCEL_HYST_GAP = 0.02  # don't change accel command for small oscilalitons within this value

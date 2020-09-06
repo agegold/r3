@@ -3,6 +3,14 @@ from selfdrive.car import dbc_dict
 from common.params import Params
 Ecu = car.CarParams.Ecu
 
+class SteerLimitParams:
+  STEER_MAX = int(Params().get('SteerMaxAdj'))   # 409 is the max, 255 is stock
+  STEER_DELTA_UP = int(Params().get('SteerDeltaUpAdj'))
+  STEER_DELTA_DOWN = int(Params().get('SteerDeltaDownAdj'))
+  STEER_DRIVER_ALLOWANCE = 50
+  STEER_DRIVER_MULTIPLIER = 2
+  STEER_DRIVER_FACTOR = 1
+
 class CAR:
   AVANTE = "HYUNDAI AVANTE"
   SONATA = "HYUNDAI SONATA"
