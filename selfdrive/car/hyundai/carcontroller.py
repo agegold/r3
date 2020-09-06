@@ -211,7 +211,7 @@ class CarController():
     # reset lead distnce after the car starts moving
     elif self.last_lead_distance != 0:
       self.last_lead_distance = 0  
-    elif CS.driverOverride or not CS.pcm_acc_status or CS.clu_CruiseSwState == 1 or CS.clu_CruiseSwState == 2:
+    elif not CS.pcm_acc_status or CS.clu_CruiseSwState == 1 or CS.clu_CruiseSwState == 2:
       self.resume_cnt = 0
       self.sc_btn_type = Buttons.NONE
       self.sc_wait_timer2 = 10
