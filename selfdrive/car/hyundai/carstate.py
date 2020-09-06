@@ -303,6 +303,19 @@ class CarState():
     self.sas_bus = CP.sasBus
     self.scc_bus = CP.sccBus
 
+    self.clu_CruiseSwState = 0
+
+
+    self.cruise_set_speed = 0
+    self.cruise_set_speed_kph = 0
+    self.curise_set_first = 0
+    self.curise_sw_check = 0
+    self.prev_clu_CruiseSwState = 0
+
+    self.prev_VSetDis = 30
+
+    self.cruise_set_mode = 0
+
     # Q = np.matrix([[10.0, 0.0], [0.0, 100.0]])
     # R = 1e3
     self.v_ego_kf = KF1D(x0=[[0.0], [0.0]],
